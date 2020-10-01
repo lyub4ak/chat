@@ -28,6 +28,13 @@ class User extends ActiveRecord implements IdentityInterface
     const STATUS_INACTIVE = 9;
     const STATUS_ACTIVE = 10;
 
+    /**
+     * Role of user.
+     *
+     * @var string
+     */
+    private $_role;
+
 
     /**
      * {@inheritdoc}
@@ -43,7 +50,7 @@ class User extends ActiveRecord implements IdentityInterface
     public function behaviors()
     {
         return [
-            TimestampBehavior::className(),
+            TimestampBehavior::class,
         ];
     }
 
@@ -53,9 +60,31 @@ class User extends ActiveRecord implements IdentityInterface
     public function rules()
     {
         return [
+            [['username', 'email', 'role'], 'string', 'max' => 255],
             ['status', 'default', 'value' => self::STATUS_INACTIVE],
             ['status', 'in', 'range' => [self::STATUS_ACTIVE, self::STATUS_INACTIVE, self::STATUS_DELETED]],
         ];
+    }
+
+    /**
+     * Updates role for user if it need.
+     *
+     * @param bool $insert
+     * @param array $changeAttributes
+     * @throws \Exception
+     */
+    public function afterSave($insert, $changeAttributes)
+    {
+        if($this->_role) {
+            $auth = Yii::$app->authManager;
+            // deletes all roles of user
+            $auth->revokeAll($this->id);
+
+            // assigns new role for user
+            $role = $auth->getRole($this->_role);
+            $auth->assign($role, $this->id);
+        }
+        parent::afterSave($insert, $changeAttributes);
     }
 
     /**
@@ -208,5 +237,33 @@ class User extends ActiveRecord implements IdentityInterface
     public function removePasswordResetToken()
     {
         $this->password_reset_token = null;
+    }
+
+    /**
+     * Role of user.
+     * Assume that user has only one role because more not need in this application.
+     *
+     * @return string|null
+     */
+    public function getRole()
+    {
+        $id = $this->getId();
+        if ($id) {
+            $roles = Yii::$app->authManager->getRolesByUser($id);
+            return reset($roles)->name;
+        } else {
+            return null;
+        }
+
+    }
+
+    /**
+     * Sets role of user.
+     *
+     * @param string $role
+     */
+    public function setRole( $role)
+    {
+        $this->_role = $role;
     }
 }
