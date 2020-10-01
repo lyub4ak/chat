@@ -79,6 +79,10 @@ class RbacController extends Controller
         }
 
         $auth = Yii::$app->authManager;
+        // deletes all roles of user
+        $auth->revokeAll($id);
+
+        // assigns role admin for user
         $role = $auth->getRole('admin');
         $auth->assign($role, $id);
 
