@@ -5,7 +5,6 @@ namespace common\models;
 use Yii;
 use yii\behaviors\BlameableBehavior;
 use yii\behaviors\TimestampBehavior;
-use yii2tech\ar\softdelete\SoftDeleteBehavior;
 
 /**
  * This is the model class for table "message".
@@ -91,5 +90,19 @@ class Message extends \yii\db\ActiveRecord
      */
     public function getUsername () {
         return $this->user->username;
+    }
+
+    /**
+     * Finds all not banned messages.
+     *
+     * @return static[]
+     */
+    public static function findAllNotBanned()
+    {
+        return static::find()->where([
+            'is_banned' => false,
+        ])
+            ->with('user')
+            ->all();
     }
 }

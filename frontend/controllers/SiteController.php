@@ -1,6 +1,7 @@
 <?php
 namespace frontend\controllers;
 
+use common\models\Message;
 use frontend\models\ResendVerificationEmailForm;
 use frontend\models\VerifyEmailForm;
 use Yii;
@@ -27,23 +28,21 @@ class SiteController extends Controller
     {
         return [
             'access' => [
-                'class' => AccessControl::className(),
-                'only' => ['logout', 'signup'],
+                'class' => AccessControl::class,
                 'rules' => [
                     [
-                        'actions' => ['signup'],
+                        'actions' => ['signup', 'login'],
                         'allow' => true,
                         'roles' => ['?'],
                     ],
                     [
-                        'actions' => ['logout'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
                 ],
             ],
             'verbs' => [
-                'class' => VerbFilter::className(),
+                'class' => VerbFilter::class,
                 'actions' => [
                     'logout' => ['post'],
                 ],
@@ -74,7 +73,23 @@ class SiteController extends Controller
      */
     public function actionIndex()
     {
-        return $this->render('index');
+        $post = Yii::$app->request->post();
+        if ($post && Yii::$app->user->can('write')) {
+            // saves new message
+            $message = new Message();
+            $message->load($post);
+            $message->save();
+        }
+
+        if (Yii::$app->user->can('isAdmin')) {
+            $messages = Message::find()->with('user')->all();
+        } else {
+            $messages = Message::findAllNotBanned();
+        }
+        return $this->render('index', [
+            'messages' => $messages,
+            'messageNew' => new Message(),
+        ]);
     }
 
     /**
@@ -110,39 +125,6 @@ class SiteController extends Controller
         Yii::$app->user->logout();
 
         return $this->goHome();
-    }
-
-    /**
-     * Displays contact page.
-     *
-     * @return mixed
-     */
-    public function actionContact()
-    {
-        $model = new ContactForm();
-        if ($model->load(Yii::$app->request->post()) && $model->validate()) {
-            if ($model->sendEmail(Yii::$app->params['adminEmail'])) {
-                Yii::$app->session->setFlash('success', 'Thank you for contacting us. We will respond to you as soon as possible.');
-            } else {
-                Yii::$app->session->setFlash('error', 'There was an error sending your message.');
-            }
-
-            return $this->refresh();
-        } else {
-            return $this->render('contact', [
-                'model' => $model,
-            ]);
-        }
-    }
-
-    /**
-     * Displays about page.
-     *
-     * @return mixed
-     */
-    public function actionAbout()
-    {
-        return $this->render('about');
     }
 
     /**
@@ -256,5 +238,27 @@ class SiteController extends Controller
         return $this->render('resendVerificationEmail', [
             'model' => $model
         ]);
+    }
+
+    /**
+     * Denies or allow message.
+     *
+     * @param $messageId
+     * @param $isBanned bool Whether message should be banned.
+     * @return \yii\web\Response
+     */
+    public function actionModerate($messageId, $isBanned)
+    {
+        if (Yii::$app->user->can('isAdmin')) {
+            $message = Message::findOne($messageId);
+            if ($message) {
+                $message->is_banned = $isBanned;
+                $message->save();
+            } else {
+                Yii::$app->session->setFlash('error', 'Message not found.');
+            }
+        }
+
+        return $this->redirect(['index']);
     }
 }
