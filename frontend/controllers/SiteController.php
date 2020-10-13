@@ -45,6 +45,8 @@ class SiteController extends Controller
                 'class' => VerbFilter::class,
                 'actions' => [
                     'logout' => ['post'],
+                    'moderate' => ['post'],
+                    'send' => ['post'],
                 ],
             ],
         ];
@@ -73,16 +75,8 @@ class SiteController extends Controller
      */
     public function actionIndex()
     {
-        $post = Yii::$app->request->post();
-        if ($post && Yii::$app->user->can('write')) {
-            // saves new message
-            $message = new Message();
-            $message->load($post);
-            $message->save();
-        }
-
         if (Yii::$app->user->can('isAdmin')) {
-            $messages = Message::find()->with('user')->all();
+            $messages = Message::find()->with('user')->orderBy(['created_at' => SORT_ASC])->all();
         } else {
             $messages = Message::findAllNotBanned();
         }
@@ -90,6 +84,24 @@ class SiteController extends Controller
             'messages' => $messages,
             'messageNew' => new Message(),
         ]);
+    }
+
+    /**
+     * Saves new message.
+     *
+     * @return \yii\web\Response
+     */
+    public function actionSend()
+    {
+        $post = Yii::$app->request->post();
+        if ($post && Yii::$app->user->can('write')) {
+            // saves new message
+            $message = new Message(['scenario' => Message::SCENARIO_SEND]);
+            $message->load($post);
+            $message->save();
+        }
+
+        return $this->redirect(['index']);
     }
 
     /**

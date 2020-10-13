@@ -50,7 +50,7 @@ $formatter = Yii::$app->formatter;
       <?php if(Yii::$app->user->can('write')): ?>
           <div class="message-form">
 
-              <?php $form = ActiveForm::begin(); ?>
+              <?php $form = ActiveForm::begin(['action' => Url::to(['site/send'])]); ?>
 
               <?= $form->field($messageNew, 'text')->textarea(['rows' => 6])->label('Your Message') ?>
 

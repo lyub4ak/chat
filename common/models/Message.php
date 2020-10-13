@@ -22,6 +22,11 @@ use yii\behaviors\TimestampBehavior;
 class Message extends \yii\db\ActiveRecord
 {
     /**
+     * Message sending.
+     */
+    const SCENARIO_SEND = 'send';
+
+    /**
      * {@inheritdoc}
      */
     public static function tableName()
@@ -42,6 +47,16 @@ class Message extends \yii\db\ActiveRecord
                 'class' => TimestampBehavior::class,
             ],
         ];
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function scenarios()
+    {
+        $scenarios = parent::scenarios();
+        $scenarios[self::SCENARIO_SEND] = ['text', 'created_by_id', 'updated_by_id', 'created_at', 'updated_at'];
+        return $scenarios;
     }
 
     /**
@@ -103,6 +118,7 @@ class Message extends \yii\db\ActiveRecord
             'is_banned' => false,
         ])
             ->with('user')
+            ->orderBy(['created_at' => SORT_ASC])
             ->all();
     }
 }
